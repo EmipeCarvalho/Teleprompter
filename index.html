@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#000000">
+<title>Teleprompter</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='black'/%3E%3Cpolygon points='38,28 74,50 38,72' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- TELA INICIAL -->
+<main id="setup-screen" class="screen">
+  <div class="setup-inner">
+    <h1 class="app-title">Teleprompter</h1>
+
+    <label class="field-label" for="script-input">Seu roteiro</label>
+    <textarea id="script-input" placeholder="Cole ou escreva aqui o texto que você vai ler..." spellcheck="false"></textarea>
+
+    <div class="controls-grid">
+      <div class="control">
+        <div class="control-header">
+          <span>Velocidade</span>
+          <span id="speed-value" class="control-value">5</span>
+        </div>
+        <input type="range" id="speed-range" min="1" max="10" step="1" value="5">
+      </div>
+
+      <div class="control">
+        <div class="control-header">
+          <span>Tamanho da fonte</span>
+          <span id="font-value" class="control-value">42</span>
+        </div>
+        <input type="range" id="font-range" min="24" max="96" step="2" value="42">
+      </div>
+
+      <div class="control">
+        <div class="control-header"><span>Alinhamento</span></div>
+        <div class="segmented" id="align-segmented">
+          <button type="button" class="segmented-btn active" data-align="left">Esquerda</button>
+          <button type="button" class="segmented-btn" data-align="center">Centro</button>
+        </div>
+      </div>
+
+      <div class="control">
+        <div class="control-header"><span>Espelhar texto</span></div>
+        <button type="button" id="mirror-toggle" class="toggle-btn" aria-pressed="false">
+          Espelhamento: Desligado
+        </button>
+      </div>
+    </div>
+
+    <div class="setup-actions">
+      <button type="button" id="fullscreen-btn" class="secondary-btn">Ativar tela cheia</button>
+      <button type="button" id="start-btn" class="primary-btn">Iniciar teleprompter</button>
+    </div>
+  </div>
+</main>
+
+<!-- TELA DO TELEPROMPTER -->
+<div id="prompter-screen" class="screen hidden">
+  <div id="scroll-container">
+    <div id="text-content"></div>
+  </div>
+
+  <div id="tap-zone"></div>
+
+  <div id="controls-overlay" class="controls-hidden">
+    <div class="controls-top">
+      <button type="button" id="exit-btn" class="ctrl-btn ctrl-btn--icon" aria-label="Sair">✕</button>
+      <button type="button" id="restart-btn" class="ctrl-btn ctrl-btn--icon" aria-label="Reiniciar">⟲</button>
+    </div>
+
+    <div class="controls-bottom">
+      <div class="ctrl-row">
+        <button type="button" id="font-dec-btn" class="ctrl-btn">A−</button>
+        <button type="button" id="font-inc-btn" class="ctrl-btn">A+</button>
+      </div>
+      <div class="ctrl-row ctrl-row--main">
+        <button type="button" id="speed-dec-btn" class="ctrl-btn ctrl-btn--round">−</button>
+        <button type="button" id="play-pause-btn" class="ctrl-btn ctrl-btn--play" aria-label="Play/Pause">▶</button>
+        <button type="button" id="speed-inc-btn" class="ctrl-btn ctrl-btn--round">+</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
