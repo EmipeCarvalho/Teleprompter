@@ -8,7 +8,8 @@
     speed: 5,
     fontSize: 42,
     align: "left",
-    mirror: false
+    mirror: false,
+    cameraEnabled: false
   };
 
   var state = loadState();
@@ -24,6 +25,8 @@
   var fontValue = document.getElementById("font-value");
   var alignSegmented = document.getElementById("align-segmented");
   var mirrorToggle = document.getElementById("mirror-toggle");
+  var cameraToggle = document.getElementById("camera-toggle");
+  var cameraWarning = document.getElementById("camera-warning");
   var fullscreenBtn = document.getElementById("fullscreen-btn");
   var startBtn = document.getElementById("start-btn");
 
@@ -39,6 +42,17 @@
   var speedDecBtn = document.getElementById("speed-dec-btn");
   var speedIncBtn = document.getElementById("speed-inc-btn");
   var playPauseBtn = document.getElementById("play-pause-btn");
+  var recIndicator = document.getElementById("rec-indicator");
+
+  var cameraVideo = document.getElementById("camera-video");
+  var cameraFlipBtn = document.getElementById("camera-flip-btn");
+  var recordRow = document.getElementById("record-row");
+  var recordBtn = document.getElementById("record-btn");
+  var reviewScreen = document.getElementById("review-screen");
+  var reviewVideo = document.getElementById("review-video");
+  var reviewSaveBtn = document.getElementById("review-save-btn");
+  var reviewRetakeBtn = document.getElementById("review-retake-btn");
+  var reviewExitBtn = document.getElementById("review-exit-btn");
 
   // ---------- runtime scroll state ----------
   var isPlaying = false;
@@ -47,6 +61,14 @@
   var scrollPosition = 0; // fractional px, more precise than scrollTop
   var wakeLock = null;
   var hideControlsTimer = null;
+
+  // ---------- runtime camera/recording state ----------
+  var cameraStream = null;
+  var cameraFacing = "user";
+  var mediaRecorder = null;
+  var recordedChunks = [];
+  var isRecording = false;
+  var lastRecordingUrl = null;
 
   // ---------- persistence ----------
   function loadState() {
@@ -77,6 +99,17 @@
     fontValue.textContent = state.fontSize;
     setAlignUI(state.align);
     setMirrorUI(state.mirror);
+    setCameraUI(state.cameraEnabled);
+  }
+
+  function cameraApiAvailable() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  }
+
+  function setCameraUI(cameraEnabled) {
+    cameraToggle.setAttribute("aria-pressed", cameraEnabled ? "true" : "false");
+    cameraToggle.textContent = "Câmera: " + (cameraEnabled ? "Ligada" : "Desligada");
+    cameraWarning.classList.toggle("hidden", !cameraEnabled || cameraApiAvailable());
   }
 
   function setAlignUI(align) {
@@ -122,6 +155,12 @@
     saveState();
   });
 
+  cameraToggle.addEventListener("click", function () {
+    state.cameraEnabled = !state.cameraEnabled;
+    setCameraUI(state.cameraEnabled);
+    saveState();
+  });
+
   fullscreenBtn.addEventListener("click", function () {
     requestFullscreenSafe(document.documentElement);
   });
@@ -156,10 +195,18 @@
     scheduleAutoHide();
     play();
     requestWakeLock();
+    if (state.cameraEnabled) startCamera();
   }
 
   function exitPrompter() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.onstop = null; // sair descarta a gravação em andamento
+      mediaRecorder.stop();
+    }
+    isRecording = false;
     pause();
+    stopCamera();
+    hideReview();
     prompterScreen.classList.add("hidden");
     setupScreen.classList.remove("hidden");
     releaseWakeLock();
@@ -275,9 +322,188 @@
     if (isPlaying) scheduleAutoHide();
   });
 
+  // ---------- câmera ----------
+  function requestCameraStream(facing) {
+    return navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing },
+      audio: true
+    });
+  }
+
+  function startCamera() {
+    if (!cameraApiAvailable()) {
+      alert("A câmera não está disponível. É necessário acessar por HTTPS (ou localhost) em um navegador compatível.");
+      return;
+    }
+    cameraFacing = "user";
+    requestCameraStream(cameraFacing).then(function (stream) {
+      cameraStream = stream;
+      cameraVideo.srcObject = stream;
+      prompterScreen.classList.add("camera-mode");
+      cameraFlipBtn.classList.remove("hidden");
+      recordRow.classList.remove("hidden");
+    }).catch(function (err) {
+      alert("Não foi possível acessar a câmera: " + (err && err.message ? err.message : err));
+    });
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(function (t) {
+        t.stop();
+      });
+      cameraStream = null;
+    }
+    cameraVideo.srcObject = null;
+    prompterScreen.classList.remove("camera-mode");
+    cameraFlipBtn.classList.add("hidden");
+    recordRow.classList.add("hidden");
+    recIndicator.classList.add("hidden");
+  }
+
+  cameraFlipBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (isRecording) return; // não troca de câmera com gravação em andamento
+    var newFacing = cameraFacing === "user" ? "environment" : "user";
+    requestCameraStream(newFacing).then(function (stream) {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(function (t) {
+          t.stop();
+        });
+      }
+      cameraStream = stream;
+      cameraFacing = newFacing;
+      cameraVideo.srcObject = stream;
+    }).catch(function () {
+      /* câmera solicitada indisponível — mantém a atual */
+    });
+  });
+
+  // ---------- gravação ----------
+  function pickMimeType() {
+    var candidates = [
+      "video/mp4",
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm"
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported(candidates[i])) {
+        return candidates[i];
+      }
+    }
+    return "";
+  }
+
+  function startRecording() {
+    if (!cameraStream) return;
+    recordedChunks = [];
+    var mimeType = pickMimeType();
+    try {
+      mediaRecorder = mimeType ? new MediaRecorder(cameraStream, { mimeType: mimeType }) : new MediaRecorder(cameraStream);
+    } catch (e) {
+      alert("Não foi possível iniciar a gravação neste navegador.");
+      return;
+    }
+    mediaRecorder.ondataavailable = function (e) {
+      if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+    };
+    mediaRecorder.onstop = function () {
+      var blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || mimeType || "video/webm" });
+      showReview(blob);
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    recordBtn.classList.add("is-recording");
+    recIndicator.classList.remove("hidden");
+    if (!isPlaying) play();
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    isRecording = false;
+    recordBtn.classList.remove("is-recording");
+    recIndicator.classList.add("hidden");
+    pause();
+  }
+
+  recordBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (isRecording) stopRecording();
+    else startRecording();
+  });
+
+  // ---------- revisão do vídeo gravado ----------
+  function showReview(blob) {
+    if (lastRecordingUrl) URL.revokeObjectURL(lastRecordingUrl);
+    lastRecordingUrl = URL.createObjectURL(blob);
+    reviewVideo.src = lastRecordingUrl;
+    reviewScreen.dataset.mimeType = blob.type;
+    reviewScreen.classList.remove("hidden");
+  }
+
+  function hideReview() {
+    reviewScreen.classList.add("hidden");
+    reviewVideo.pause();
+    reviewVideo.removeAttribute("src");
+    reviewVideo.load();
+  }
+
+  function saveBlob(blob, mimeType) {
+    var ext = mimeType && mimeType.indexOf("mp4") !== -1 ? "mp4" : "webm";
+    var filename = "teleprompter-" + Date.now() + "." + ext;
+    var file = null;
+    try {
+      file = new File([blob], filename, { type: mimeType || blob.type });
+    } catch (e) {
+      /* File API indisponível — cai no download direto */
+    }
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: "Teleprompter" }).catch(function () {});
+      return;
+    }
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 30000);
+  }
+
+  reviewSaveBtn.addEventListener("click", function () {
+    if (!lastRecordingUrl) return;
+    fetch(lastRecordingUrl).then(function (r) {
+      return r.blob();
+    }).then(function (blob) {
+      saveBlob(blob, reviewScreen.dataset.mimeType);
+    });
+  });
+
+  reviewRetakeBtn.addEventListener("click", function () {
+    hideReview();
+    resetScrollPosition();
+  });
+
+  reviewExitBtn.addEventListener("click", function () {
+    hideReview();
+    exitPrompter();
+  });
+
   // ---------- prompter controls ----------
   exitBtn.addEventListener("click", function (e) {
     e.stopPropagation();
+    if (isRecording) {
+      var confirmExit = window.confirm(
+        "Você ainda está gravando. Sair agora vai descartar a gravação atual. Deseja continuar?"
+      );
+      if (!confirmExit) return;
+    }
     exitPrompter();
   });
 

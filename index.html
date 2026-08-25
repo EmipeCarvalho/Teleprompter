@@ -53,7 +53,19 @@
           Espelhamento: Desligado
         </button>
       </div>
+
+      <div class="control">
+        <div class="control-header"><span>Câmera + gravação</span></div>
+        <button type="button" id="camera-toggle" class="toggle-btn" aria-pressed="false">
+          Câmera: Desligada
+        </button>
+      </div>
     </div>
+
+    <p id="camera-warning" class="camera-warning hidden">
+      A câmera só funciona em conexão segura (HTTPS) ou em "localhost". Veja o
+      README para gerar um certificado local e acessar por HTTPS no celular.
+    </p>
 
     <div class="setup-actions">
       <button type="button" id="fullscreen-btn" class="secondary-btn">Ativar tela cheia</button>
@@ -64,11 +76,15 @@
 
 <!-- TELA DO TELEPROMPTER -->
 <div id="prompter-screen" class="screen hidden">
+  <video id="camera-video" autoplay playsinline muted></video>
+
   <div id="scroll-container">
     <div id="text-content"></div>
   </div>
 
   <div id="tap-zone"></div>
+
+  <span id="rec-indicator" class="rec-indicator hidden"><span class="dot"></span>REC</span>
 
   <div id="controls-overlay" class="controls-hidden">
     <div class="controls-top">
@@ -80,12 +96,27 @@
       <div class="ctrl-row">
         <button type="button" id="font-dec-btn" class="ctrl-btn">A−</button>
         <button type="button" id="font-inc-btn" class="ctrl-btn">A+</button>
+        <button type="button" id="camera-flip-btn" class="ctrl-btn ctrl-btn--icon hidden" aria-label="Trocar câmera">⇄</button>
       </div>
       <div class="ctrl-row ctrl-row--main">
         <button type="button" id="speed-dec-btn" class="ctrl-btn ctrl-btn--round">−</button>
         <button type="button" id="play-pause-btn" class="ctrl-btn ctrl-btn--play" aria-label="Play/Pause">▶</button>
         <button type="button" id="speed-inc-btn" class="ctrl-btn ctrl-btn--round">+</button>
       </div>
+      <div class="ctrl-row hidden" id="record-row">
+        <button type="button" id="record-btn" class="ctrl-btn ctrl-btn--record" aria-label="Gravar">
+          <span class="record-btn-dot"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="review-screen" class="hidden">
+    <video id="review-video" playsinline controls></video>
+    <div class="review-actions">
+      <button type="button" id="review-save-btn" class="primary-btn">Salvar vídeo</button>
+      <button type="button" id="review-retake-btn" class="secondary-btn secondary-btn--dark">Gravar novamente</button>
+      <button type="button" id="review-exit-btn" class="secondary-btn secondary-btn--dark">Sair</button>
     </div>
   </div>
 </div>
