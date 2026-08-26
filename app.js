@@ -32,7 +32,6 @@
 
   var scrollContainer = document.getElementById("scroll-container");
   var textContent = document.getElementById("text-content");
-  var tapZone = document.getElementById("tap-zone");
   var controlsOverlay = document.getElementById("controls-overlay");
 
   var exitBtn = document.getElementById("exit-btn");
@@ -53,7 +52,6 @@
   var reviewSaveBtn = document.getElementById("review-save-btn");
   var reviewRetakeBtn = document.getElementById("review-retake-btn");
   var reviewExitBtn = document.getElementById("review-exit-btn");
-  var seekBar = document.getElementById("seek-bar");
   var toast = document.getElementById("toast");
   var exitConfirm = document.getElementById("exit-confirm");
   var exitConfirmCancelBtn = document.getElementById("exit-confirm-cancel");
@@ -256,12 +254,6 @@
     textContent.style.paddingBottom = viewportH * 0.9 + "px";
     scrollPosition = 0;
     scrollContainer.scrollTop = 0;
-    updateSeekBar();
-  }
-
-  function updateSeekBar() {
-    var maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-    seekBar.value = maxScroll > 0 ? Math.round((scrollPosition / maxScroll) * 1000) : 0;
   }
 
   // ---------- scroll animation ----------
@@ -288,7 +280,6 @@
     }
 
     scrollContainer.scrollTop = scrollPosition;
-    updateSeekBar();
     rafId = requestAnimationFrame(tick);
   }
 
@@ -338,10 +329,30 @@
     hideControlsTimer = null;
   }
 
-  tapZone.addEventListener("click", function () {
-    togglePlayPause();
+  // O texto rola nativamente com o dedo (a área já é um contêiner com
+  // overflow-y: scroll — o navegador cuida do arrastar/momentum sozinho).
+  // Um toque simples (sem arrastar) dá play/pause; o próprio navegador não
+  // dispara "click" depois de um gesto de rolagem, então os dois convivem
+  // sem gesto customizado nenhum. O pointerdown já pausa (pra não brigar
+  // com o arrasto), então o click decide com base no estado ANTES do
+  // toque, não no que ficou logo depois do pointerdown.
+  var wasPlayingBeforeTouch = false;
+
+  scrollContainer.addEventListener("pointerdown", function () {
+    wasPlayingBeforeTouch = isPlaying;
+    if (isPlaying) pause();
+  });
+
+  scrollContainer.addEventListener("click", function () {
+    if (!wasPlayingBeforeTouch) {
+      play();
+      scheduleAutoHide();
+    }
     showControls();
-    if (isPlaying) scheduleAutoHide();
+  });
+
+  scrollContainer.addEventListener("scroll", function () {
+    scrollPosition = scrollContainer.scrollTop;
   });
 
   controlsOverlay.addEventListener("click", function () {
@@ -349,30 +360,16 @@
     if (isPlaying) scheduleAutoHide();
   });
 
-  // Barra de progresso arrastável: dá pra tocar e mover pra qualquer ponto
-  // do roteiro (por exemplo, se a rolagem passou de uma palavra e você
-  // precisa voltar), sem depender de um gesto de arrastar em tela cheia.
-  seekBar.addEventListener("pointerdown", function (e) {
-    e.stopPropagation();
-    if (isPlaying) pause();
-  });
-
-  seekBar.addEventListener("input", function () {
-    var maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-    scrollPosition = (parseInt(seekBar.value, 10) / 1000) * maxScroll;
-    scrollContainer.scrollTop = scrollPosition;
-    showControls();
-    clearAutoHide();
-  });
-
   // ---------- câmera ----------
   function requestCameraStream(facing) {
+    // Só o aspect ratio é pedido como "ideal" — forçar também uma resolução
+    // alta (ex.: 1080x1920) faz alguns iPhones escolherem um recorte
+    // digitalmente ampliado do sensor para tentar atingi-la, dando um
+    // efeito de zoom indesejado na gravação.
     return navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: facing,
-        aspectRatio: { ideal: 9 / 16 },
-        width: { ideal: 1080 },
-        height: { ideal: 1920 }
+        aspectRatio: { ideal: 9 / 16 }
       },
       audio: true
     });
