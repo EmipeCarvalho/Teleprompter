@@ -53,6 +53,11 @@
   var reviewSaveBtn = document.getElementById("review-save-btn");
   var reviewRetakeBtn = document.getElementById("review-retake-btn");
   var reviewExitBtn = document.getElementById("review-exit-btn");
+  var seekBar = document.getElementById("seek-bar");
+  var toast = document.getElementById("toast");
+  var exitConfirm = document.getElementById("exit-confirm");
+  var exitConfirmCancelBtn = document.getElementById("exit-confirm-cancel");
+  var exitConfirmOkBtn = document.getElementById("exit-confirm-ok");
 
   // ---------- runtime scroll state ----------
   var isPlaying = false;
@@ -61,6 +66,7 @@
   var scrollPosition = 0; // fractional px, more precise than scrollTop
   var wakeLock = null;
   var hideControlsTimer = null;
+  var toastTimer = null;
 
   // ---------- runtime camera/recording state ----------
   var cameraStream = null;
@@ -176,6 +182,19 @@
     requestFullscreenSafe(document.documentElement);
   });
 
+  // Avisos aparecem na própria tela em vez de alert()/confirm(): dentro de
+  // um iframe restrito (como o preview de artifacts), diálogos nativos do
+  // navegador podem ser bloqueados silenciosamente, deixando o app parecer
+  // travado sem explicação nenhuma.
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.remove("hidden");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toast.classList.add("hidden");
+    }, 4500);
+  }
+
   function requestFullscreenSafe(el) {
     try {
       var req = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -207,6 +226,7 @@
     pause();
     stopCamera();
     hideReview();
+    exitConfirm.classList.add("hidden");
     prompterScreen.classList.add("hidden");
     setupScreen.classList.remove("hidden");
     releaseWakeLock();
@@ -236,6 +256,12 @@
     textContent.style.paddingBottom = viewportH * 0.9 + "px";
     scrollPosition = 0;
     scrollContainer.scrollTop = 0;
+    updateSeekBar();
+  }
+
+  function updateSeekBar() {
+    var maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+    seekBar.value = maxScroll > 0 ? Math.round((scrollPosition / maxScroll) * 1000) : 0;
   }
 
   // ---------- scroll animation ----------
@@ -262,6 +288,7 @@
     }
 
     scrollContainer.scrollTop = scrollPosition;
+    updateSeekBar();
     rafId = requestAnimationFrame(tick);
   }
 
@@ -311,48 +338,31 @@
     hideControlsTimer = null;
   }
 
-  // Toque simples = play/pause. Arrastar o dedo pra cima/baixo = voltar ou
-  // adiantar manualmente no texto (útil quando a rolagem passa rápido demais
-  // e você precisa reler uma palavra).
-  var dragState = null;
-  var DRAG_THRESHOLD = 6;
-
-  tapZone.addEventListener("pointerdown", function (e) {
-    var wasPlaying = isPlaying;
-    if (isPlaying) pause();
-    dragState = { startY: e.clientY, startScroll: scrollPosition, moved: false, wasPlaying: wasPlaying };
+  tapZone.addEventListener("click", function () {
+    togglePlayPause();
     showControls();
+    if (isPlaying) scheduleAutoHide();
   });
-
-  tapZone.addEventListener("pointermove", function (e) {
-    if (!dragState) return;
-    var deltaY = e.clientY - dragState.startY;
-    if (Math.abs(deltaY) > DRAG_THRESHOLD) dragState.moved = true;
-    if (dragState.moved) {
-      var maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-      scrollPosition = Math.max(0, Math.min(maxScroll, dragState.startScroll - deltaY));
-      scrollContainer.scrollTop = scrollPosition;
-    }
-  });
-
-  function endDrag() {
-    if (!dragState) return;
-    // Toque simples (sem arrastar) enquanto estava pausado -> retoma.
-    // Se estava tocando, o pointerdown já pausou e é isso que queremos.
-    // Se foi um arrasto, também fica pausado na nova posição.
-    if (!dragState.moved && !dragState.wasPlaying) {
-      play();
-      scheduleAutoHide();
-    }
-    dragState = null;
-  }
-
-  tapZone.addEventListener("pointerup", endDrag);
-  tapZone.addEventListener("pointercancel", endDrag);
 
   controlsOverlay.addEventListener("click", function () {
     showControls();
     if (isPlaying) scheduleAutoHide();
+  });
+
+  // Barra de progresso arrastável: dá pra tocar e mover pra qualquer ponto
+  // do roteiro (por exemplo, se a rolagem passou de uma palavra e você
+  // precisa voltar), sem depender de um gesto de arrastar em tela cheia.
+  seekBar.addEventListener("pointerdown", function (e) {
+    e.stopPropagation();
+    if (isPlaying) pause();
+  });
+
+  seekBar.addEventListener("input", function () {
+    var maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+    scrollPosition = (parseInt(seekBar.value, 10) / 1000) * maxScroll;
+    scrollContainer.scrollTop = scrollPosition;
+    showControls();
+    clearAutoHide();
   });
 
   // ---------- câmera ----------
@@ -370,7 +380,7 @@
 
   function startCamera() {
     if (!cameraApiAvailable()) {
-      alert("A câmera não está disponível. É necessário acessar por HTTPS (ou localhost) em um navegador compatível.");
+      showToast("A câmera não está disponível. É necessário acessar por HTTPS (ou localhost) em um navegador compatível.");
       return;
     }
     cameraFacing = "user";
@@ -381,7 +391,7 @@
       cameraFlipBtn.classList.remove("hidden");
       recordRow.classList.remove("hidden");
     }).catch(function (err) {
-      alert("Não foi possível acessar a câmera: " + (err && err.message ? err.message : err));
+      showToast("Não foi possível acessar a câmera: " + (err && err.message ? err.message : err));
     });
   }
 
@@ -440,7 +450,7 @@
     try {
       mediaRecorder = mimeType ? new MediaRecorder(cameraStream, { mimeType: mimeType }) : new MediaRecorder(cameraStream);
     } catch (e) {
-      alert("Não foi possível iniciar a gravação neste navegador.");
+      showToast("Não foi possível iniciar a gravação neste navegador.");
       return;
     }
     mediaRecorder.ondataavailable = function (e) {
@@ -537,11 +547,20 @@
   exitBtn.addEventListener("click", function (e) {
     e.stopPropagation();
     if (isRecording) {
-      var confirmExit = window.confirm(
-        "Você ainda está gravando. Sair agora vai descartar a gravação atual. Deseja continuar?"
-      );
-      if (!confirmExit) return;
+      exitConfirm.classList.remove("hidden");
+      return;
     }
+    exitPrompter();
+  });
+
+  exitConfirmCancelBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    exitConfirm.classList.add("hidden");
+  });
+
+  exitConfirmOkBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    exitConfirm.classList.add("hidden");
     exitPrompter();
   });
 
