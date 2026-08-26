@@ -297,7 +297,7 @@ input[type="range"]::-moz-range-thumb {
   position: absolute;
   inset: 0;
   z-index: 5;
-  touch-action: manipulation;
+  touch-action: none;
 }
 
 #controls-overlay {
@@ -396,9 +396,11 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* ---------- MODO CÂMERA ----------
-   A câmera fica num quadro pequeno (estilo selfie) no topo da tela;
-   o roteiro rola numa área própria logo abaixo, sem se sobrepor ao vídeo —
-   assim dá pra enquadrar o rosto e ler o texto ao mesmo tempo. */
+   A câmera grava em 9:16 (formato Reels/Stories) e ocupa quase a tela
+   toda, como um app de câmera. O roteiro fica sobreposto numa faixa bem
+   no topo do quadro — pertinho da lente — pra manter o olhar natural
+   enquanto lê e grava ao mesmo tempo. O texto não fica gravado no vídeo,
+   é só um guia na tela. */
 
 #camera-video {
   display: none;
@@ -407,9 +409,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 #prompter-screen.camera-mode {
-  --cam-w: min(56vw, 300px);
-  --cam-h: calc(var(--cam-w) * 4 / 3);
-  --cam-top: calc(var(--safe-top) + 68px);
+  --cam-top: calc(var(--safe-top) + 10px);
+  --cam-w: min(90vw, 480px);
+  --cam-h: calc(var(--cam-w) * 16 / 9);
+  --text-band-h: calc(var(--cam-h) * 0.3);
 }
 
 #prompter-screen.camera-mode #camera-video {
@@ -421,7 +424,7 @@ input[type="range"]::-moz-range-thumb {
   bottom: auto;
   transform: translateX(-50%);
   width: var(--cam-w);
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 9 / 16;
   border-radius: 20px;
   border: 2px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
@@ -429,9 +432,20 @@ input[type="range"]::-moz-range-thumb {
 }
 
 #prompter-screen.camera-mode #scroll-container {
-  top: calc(var(--cam-top) + var(--cam-h) + 18px);
-  background: #000000;
-  z-index: 1;
+  top: var(--cam-top);
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translateX(-50%);
+  width: var(--cam-w);
+  height: var(--text-band-h);
+  border-radius: 20px 20px 0 0;
+  background: transparent;
+  z-index: 3;
+}
+
+#prompter-screen.camera-mode #text-content {
+  background: rgba(0, 0, 0, 0.55);
 }
 
 .rec-indicator {

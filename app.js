@@ -311,11 +311,44 @@
     hideControlsTimer = null;
   }
 
-  tapZone.addEventListener("click", function () {
-    togglePlayPause();
+  // Toque simples = play/pause. Arrastar o dedo pra cima/baixo = voltar ou
+  // adiantar manualmente no texto (útil quando a rolagem passa rápido demais
+  // e você precisa reler uma palavra).
+  var dragState = null;
+  var DRAG_THRESHOLD = 6;
+
+  tapZone.addEventListener("pointerdown", function (e) {
+    var wasPlaying = isPlaying;
+    if (isPlaying) pause();
+    dragState = { startY: e.clientY, startScroll: scrollPosition, moved: false, wasPlaying: wasPlaying };
     showControls();
-    if (isPlaying) scheduleAutoHide();
   });
+
+  tapZone.addEventListener("pointermove", function (e) {
+    if (!dragState) return;
+    var deltaY = e.clientY - dragState.startY;
+    if (Math.abs(deltaY) > DRAG_THRESHOLD) dragState.moved = true;
+    if (dragState.moved) {
+      var maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+      scrollPosition = Math.max(0, Math.min(maxScroll, dragState.startScroll - deltaY));
+      scrollContainer.scrollTop = scrollPosition;
+    }
+  });
+
+  function endDrag() {
+    if (!dragState) return;
+    // Toque simples (sem arrastar) enquanto estava pausado -> retoma.
+    // Se estava tocando, o pointerdown já pausou e é isso que queremos.
+    // Se foi um arrasto, também fica pausado na nova posição.
+    if (!dragState.moved && !dragState.wasPlaying) {
+      play();
+      scheduleAutoHide();
+    }
+    dragState = null;
+  }
+
+  tapZone.addEventListener("pointerup", endDrag);
+  tapZone.addEventListener("pointercancel", endDrag);
 
   controlsOverlay.addEventListener("click", function () {
     showControls();
@@ -325,7 +358,12 @@
   // ---------- câmera ----------
   function requestCameraStream(facing) {
     return navigator.mediaDevices.getUserMedia({
-      video: { facingMode: facing },
+      video: {
+        facingMode: facing,
+        aspectRatio: { ideal: 9 / 16 },
+        width: { ideal: 1080 },
+        height: { ideal: 1920 }
+      },
       audio: true
     });
   }
