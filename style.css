@@ -395,30 +395,43 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* ---------- MODO CÂMERA ---------- */
+/* ---------- MODO CÂMERA ----------
+   A câmera fica num quadro pequeno (estilo selfie) no topo da tela;
+   o roteiro rola numa área própria logo abaixo, sem se sobrepor ao vídeo —
+   assim dá pra enquadrar o rosto e ler o texto ao mesmo tempo. */
 
 #camera-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  background: #000000;
   display: none;
-  z-index: 0;
+  background: #000000;
+  object-fit: cover;
+}
+
+#prompter-screen.camera-mode {
+  --cam-w: min(56vw, 300px);
+  --cam-h: calc(var(--cam-w) * 4 / 3);
+  --cam-top: calc(var(--safe-top) + 68px);
 }
 
 #prompter-screen.camera-mode #camera-video {
   display: block;
+  position: absolute;
+  top: var(--cam-top);
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translateX(-50%);
+  width: var(--cam-w);
+  aspect-ratio: 3 / 4;
+  border-radius: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  z-index: 2;
 }
 
 #prompter-screen.camera-mode #scroll-container {
-  background: transparent;
+  top: calc(var(--cam-top) + var(--cam-h) + 18px);
+  background: #000000;
   z-index: 1;
-}
-
-#prompter-screen.camera-mode #text-content {
-  background: rgba(0, 0, 0, 0.55);
 }
 
 .rec-indicator {
