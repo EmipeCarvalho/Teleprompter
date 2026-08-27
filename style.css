@@ -389,11 +389,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* ---------- MODO CÂMERA ----------
-   A câmera grava em 9:16 (formato Reels/Stories) e ocupa quase a tela
-   toda, como um app de câmera. O roteiro fica sobreposto numa faixa bem
-   no topo do quadro — pertinho da lente — pra manter o olhar natural
-   enquanto lê e grava ao mesmo tempo. O texto não fica gravado no vídeo,
-   é só um guia na tela. */
+   A câmera ocupa a tela inteira, de ponta a ponta (como um app de câmera
+   de verdade), e o roteiro fica sobreposto por cima, numa faixa na parte
+   de cima/meio da tela — perto o suficiente da lente pra manter o olhar
+   natural. O texto não fica gravado no vídeo, é só um guia na tela. */
 
 #camera-video {
   display: none;
@@ -401,44 +400,24 @@ input[type="range"]::-moz-range-thumb {
   object-fit: cover;
 }
 
-#prompter-screen.camera-mode {
-  --cam-top: calc(var(--safe-top) + 10px);
-  --cam-w: min(90vw, 480px);
-  --cam-h: calc(var(--cam-w) * 16 / 9);
-  --text-band-h: calc(var(--cam-h) * 0.3);
-}
-
 #prompter-screen.camera-mode #camera-video {
   display: block;
   position: absolute;
-  top: var(--cam-top);
-  left: 50%;
-  right: auto;
-  bottom: auto;
-  transform: translateX(-50%);
-  width: var(--cam-w);
-  aspect-ratio: 9 / 16;
-  border-radius: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
 
 #prompter-screen.camera-mode #scroll-container {
-  top: var(--cam-top);
-  left: 50%;
-  right: auto;
-  bottom: auto;
-  transform: translateX(-50%);
-  width: var(--cam-w);
-  height: var(--text-band-h);
-  border-radius: 20px 20px 0 0;
+  top: calc(var(--safe-top) + 90px);
+  height: 38vh;
   background: transparent;
   z-index: 3;
 }
 
 #prompter-screen.camera-mode #text-content {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .rec-indicator {
