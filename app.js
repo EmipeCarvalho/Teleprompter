@@ -362,15 +362,14 @@
 
   // ---------- câmera ----------
   function requestCameraStream(facing) {
-    // Só o aspect ratio é pedido como "ideal" — forçar também uma resolução
-    // alta (ex.: 1080x1920) faz alguns iPhones escolherem um recorte
-    // digitalmente ampliado do sensor para tentar atingi-la, dando um
-    // efeito de zoom indesejado na gravação.
+    // Nenhum aspect ratio é pedido: mesmo como "ideal", isso faz o iPhone
+    // recortar/ampliar a imagem do sensor pra tentar atingir a proporção,
+    // dando um efeito de zoom indesejado. Deixamos a câmera abrir no campo
+    // de visão natural dela; o enquadramento em tela (e o corte visual
+    // pra caber na tela cheia) é só CSS (object-fit: cover), não afeta o
+    // que a câmera realmente captura.
     return navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: facing,
-        aspectRatio: { ideal: 9 / 16 }
-      },
+      video: { facingMode: facing },
       audio: true
     });
   }
