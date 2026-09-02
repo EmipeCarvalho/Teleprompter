@@ -386,6 +386,9 @@
       prompterScreen.classList.add("camera-mode");
       cameraFlipBtn.classList.remove("hidden");
       recordRow.classList.remove("hidden");
+      if (stream.getAudioTracks().length === 0) {
+        showToast("Câmera ativada sem áudio. Veja Ajustes > Safari > Microfone e permita para este site.");
+      }
     }).catch(function (err) {
       showToast("Não foi possível acessar a câmera: " + (err && err.message ? err.message : err));
     });
@@ -425,7 +428,12 @@
 
   // ---------- gravação ----------
   function pickMimeType() {
+    // Codecs explícitos primeiro: em alguns navegadores, "video/mp4" puro
+    // (sem indicar um codec de áudio) faz o gravador codificar só o vídeo,
+    // descartando o áudio silenciosamente.
     var candidates = [
+      "video/mp4;codecs=avc1,mp4a.40.2",
+      "video/mp4;codecs=h264,aac",
       "video/mp4",
       "video/webm;codecs=vp9,opus",
       "video/webm;codecs=vp8,opus",
