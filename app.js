@@ -428,12 +428,11 @@
 
   // ---------- gravação ----------
   function pickMimeType() {
-    // Codecs explícitos primeiro: em alguns navegadores, "video/mp4" puro
-    // (sem indicar um codec de áudio) faz o gravador codificar só o vídeo,
-    // descartando o áudio silenciosamente.
+    // "video/mp4" puro primeiro — é o formato que o Safari testa e suporta
+    // melhor. Strings de codec explícitas e não totalmente padronizadas
+    // (ex.: "avc1,mp4a.40.2" sem o perfil/nível) podem fazer o Safari cair
+    // num caminho de codificação menos testado e mais instável.
     var candidates = [
-      "video/mp4;codecs=avc1,mp4a.40.2",
-      "video/mp4;codecs=h264,aac",
       "video/mp4",
       "video/webm;codecs=vp9,opus",
       "video/webm;codecs=vp8,opus",
@@ -464,7 +463,11 @@
       var blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || mimeType || "video/webm" });
       showReview(blob);
     };
-    mediaRecorder.start();
+    // Passar um timeslice faz o gravador liberar pedaços a cada 1s em vez
+    // de só no final. Sem isso, o Safari é conhecido por travar o vídeo
+    // depois de alguns segundos (o áudio continua, mas o quadro congela) —
+    // pedir pedaços periódicos evita esse travamento.
+    mediaRecorder.start(1000);
     isRecording = true;
     recordBtn.classList.add("is-recording");
     recIndicator.classList.remove("hidden");
