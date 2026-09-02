@@ -472,12 +472,30 @@
     recordBtn.classList.add("is-recording");
     recIndicator.classList.remove("hidden");
     if (!isPlaying) play();
+
+    // Em gravações mais longas, o iPhone às vezes para de entregar imagem
+    // da câmera (aquecimento/economia de energia) enquanto o microfone
+    // continua captando — o vídeo fica com o quadro congelado e o áudio
+    // seguindo por baixo. Isso dispara o evento "mute" na faixa de vídeo;
+    // detectamos e paramos a gravação na hora, com aviso, em vez de deixar
+    // minutos de vídeo quebrado acontecerem sem você perceber.
+    var videoTrack = cameraStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.onmute = function () {
+        if (isRecording) {
+          showToast("A câmera parou de enviar imagem (comum em gravações longas). Gravação parada — tente takes mais curtos.");
+          stopRecording();
+        }
+      };
+    }
   }
 
   function stopRecording() {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
     }
+    var videoTrack = cameraStream && cameraStream.getVideoTracks()[0];
+    if (videoTrack) videoTrack.onmute = null;
     isRecording = false;
     recordBtn.classList.remove("is-recording");
     recIndicator.classList.add("hidden");
