@@ -362,14 +362,21 @@
 
   // ---------- câmera ----------
   function requestCameraStream(facing) {
-    // Nenhum aspect ratio é pedido: mesmo como "ideal", isso faz o iPhone
-    // recortar/ampliar a imagem do sensor pra tentar atingir a proporção,
-    // dando um efeito de zoom indesejado. Deixamos a câmera abrir no campo
-    // de visão natural dela; o enquadramento em tela (e o corte visual
-    // pra caber na tela cheia) é só CSS (object-fit: cover), não afeta o
-    // que a câmera realmente captura.
+    // Pedimos Full HD nas dimensões NATIVAS do sensor (1920x1080, paisagem;
+    // o iPhone gira o quadro sozinho quando o aparelho está em pé). Isso
+    // casa com um modo real da câmera, então ela usa o campo de visão
+    // completo. Pedir dimensões em retrato (1080x1920) ou um aspect ratio
+    // não corresponde a nenhum modo nativo e faz o iPhone "aproximar"
+    // recortando/ampliando o sensor — era isso que causava o zoom. Sem
+    // pedir resolução nenhuma, o Safari cai no padrão (~640x480), que é
+    // baixo demais para um vídeo final.
     return navigator.mediaDevices.getUserMedia({
-      video: { facingMode: facing },
+      video: {
+        facingMode: facing,
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30 }
+      },
       audio: true
     });
   }
@@ -446,13 +453,34 @@
     return "";
   }
 
+  // Taxa de bits explícita: o padrão do gravador costuma ser baixo e deixa
+  // o vídeo com aspecto "borrado" mesmo em Full HD. 8 Mbps é um valor
+  // confortável para 1080p. Tentamos com bitrate + formato; se o navegador
+  // rejeitar as opções, caímos para só o formato e, por fim, para o padrão.
+  function createRecorder(stream, mimeType) {
+    var attempts = [
+      { mimeType: mimeType, videoBitsPerSecond: 8000000 },
+      { mimeType: mimeType },
+      null
+    ];
+    for (var i = 0; i < attempts.length; i++) {
+      var opts = attempts[i];
+      if (opts && !opts.mimeType) delete opts.mimeType;
+      try {
+        return opts ? new MediaRecorder(stream, opts) : new MediaRecorder(stream);
+      } catch (e) {
+        /* tenta a próxima combinação */
+      }
+    }
+    return null;
+  }
+
   function startRecording() {
     if (!cameraStream) return;
     recordedChunks = [];
     var mimeType = pickMimeType();
-    try {
-      mediaRecorder = mimeType ? new MediaRecorder(cameraStream, { mimeType: mimeType }) : new MediaRecorder(cameraStream);
-    } catch (e) {
+    mediaRecorder = createRecorder(cameraStream, mimeType);
+    if (!mediaRecorder) {
       showToast("Não foi possível iniciar a gravação neste navegador.");
       return;
     }
