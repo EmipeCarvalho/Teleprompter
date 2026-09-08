@@ -512,6 +512,16 @@ input[type="range"]::-moz-range-thumb {
   flex: none;
 }
 
+.review-info {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #9a9a9e;
+  text-align: center;
+  flex: none;
+  word-break: break-word;
+}
+
 .secondary-btn--dark {
   background: #1b1c1f;
   color: #ffffff;

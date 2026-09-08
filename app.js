@@ -52,6 +52,7 @@
   var reviewSaveBtn = document.getElementById("review-save-btn");
   var reviewRetakeBtn = document.getElementById("review-retake-btn");
   var reviewExitBtn = document.getElementById("review-exit-btn");
+  var reviewInfo = document.getElementById("review-info");
   var toast = document.getElementById("toast");
   var exitConfirm = document.getElementById("exit-confirm");
   var exitConfirmCancelBtn = document.getElementById("exit-confirm-cancel");
@@ -465,8 +466,14 @@
     showToast("Preparando o vídeo...");
     return blob.arrayBuffer().then(function (buf) {
       var result = window.remuxFragmentedMp4(buf);
+      reviewInfo.textContent = "MP4 clássico ✓ · " + result.info.tracks.map(function (t) {
+        return (t.handler === "vide" ? "vídeo " : t.handler === "soun" ? "áudio " : t.handler + " ") +
+          t.codec + " " + t.samples + " amostras" +
+          (t.handler === "vide" ? ", " + t.sync + " keyframes (" + t.syncSource + ")" : "");
+      }).join(" · ") + " · " + Math.round(blob.size / 1024) + " KB";
       return new Blob(result.parts, { type: type });
-    }).catch(function () {
+    }).catch(function (err) {
+      reviewInfo.textContent = "Conversão falhou (arquivo original mantido): " + (err && err.message ? err.message : err);
       return blob;
     }).then(function (finalBlob) {
       toast.classList.add("hidden");

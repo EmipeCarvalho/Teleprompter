@@ -286,12 +286,52 @@
 
   // ---------- construção das tabelas ----------
 
-  function buildStbl(dv, u8, oldStbl, track, isVideo, shift) {
+  // Lê o stsd: tipo da primeira sample entry (avc1, avc3, mp4a...) e, para
+  // H.264, o tamanho do prefixo de comprimento dos NALs (do avcC).
+  function sampleEntryInfo(dv, u8, stsd) {
+    var entryStart = stsd.start + stsd.hdr + 8; // version/flags + entry_count
+    if (entryStart + 8 > stsd.start + stsd.size) return { codec: "?", nalLen: 0 };
+    var entry = readBoxes(dv, u8, entryStart, stsd.start + stsd.size)[0];
+    var info = { codec: entry.type, nalLen: 0 };
+    if (entry.type === "avc1" || entry.type === "avc3") {
+      // VisualSampleEntry: 78 bytes fixos após o cabeçalho, depois caixas filhas
+      var kids = readBoxes(dv, u8, entry.start + entry.hdr + 78, entry.start + entry.size);
+      var avcC = findBox(kids, "avcC");
+      if (avcC) info.nalLen = (u8[avcC.start + avcC.hdr + 4] & 3) + 1;
+    }
+    return info;
+  }
+
+  // true se o sample H.264 contém um NAL IDR (tipo 5) = keyframe de verdade;
+  // false se percorreu os NALs sem achar; null se o bitstream não parseou
+  // (aí caímos nas flags do trun).
+  function sampleIsIdr(u8, off, size, nalLen) {
+    var pos = off, end = off + size, sawNal = false;
+    while (pos + nalLen < end) {
+      var len = 0;
+      for (var i = 0; i < nalLen; i++) len = len * 256 + u8[pos + i];
+      if (len <= 0 || pos + nalLen + len > end) return sawNal ? false : null;
+      var type = u8[pos + nalLen] & 0x1f;
+      sawNal = true;
+      if (type === 5) return true;
+      pos += nalLen + len;
+    }
+    return sawNal ? false : null;
+  }
+
+  function buildStbl(dv, u8, oldStbl, track, isVideo, shift, stats) {
     var kids = children(dv, u8, oldStbl);
     var parts = [];
     var stsd = findBox(kids, "stsd");
     if (!stsd) throw new Error("stbl sem stsd");
     parts.push(slice(u8, stsd.start, stsd.start + stsd.size));
+    var entry = sampleEntryInfo(dv, u8, stsd);
+    // Keyframes: as flags de sync do trun são o que o gravador *declarou*;
+    // para H.264 conferimos no próprio bitstream (NAL IDR), que é o que os
+    // editores realmente precisam para navegar na linha do tempo.
+    var useNal = isVideo && entry.nalLen > 0;
+    var nalFailed = false;
+    stats.codec = entry.codec;
 
     // stts (run-length de durações)
     var stts = [];
@@ -303,6 +343,7 @@
       var run = track.runs[r];
       chunkOffsets.push(run.offset + shift);
       chunkCounts.push(run.sizes.length);
+      var sampleOff = run.offset; // deslocamento absoluto do sample i no arquivo original
       for (var i = 0; i < run.sizes.length; i++) {
         var d = run.durations[i];
         if (d === lastDur) stts[stts.length - 1] += 1; // count é o elemento anterior
@@ -313,11 +354,18 @@
         // stts armazenado como [dur, count, dur, count...] — ajustamos abaixo
         sizes.push(run.sizes[i]);
         sampleIndex += 1;
-        if (!(run.flags[i] & SAMPLE_IS_NON_SYNC)) syncs.push(sampleIndex);
+        var isSync = !(run.flags[i] & SAMPLE_IS_NON_SYNC);
+        if (useNal && !nalFailed) {
+          var idr = sampleIsIdr(u8, sampleOff, run.sizes[i], entry.nalLen);
+          if (idr === null) nalFailed = true;
+          else isSync = idr;
+        }
+        if (isSync) syncs.push(sampleIndex);
         var c = run.cts[i];
         ctsAll.push(c);
         if (c !== 0) anyCts = true;
         if (c < 0) negCts = true;
+        sampleOff += run.sizes[i];
       }
     }
     // Reorganiza stts: guardamos [dur,count,...] mas a contagem incrementa o
@@ -342,6 +390,22 @@
       var cttsPayload = negCts ? i32array([cttsEntries.length / 2].concat(cttsEntries)) : u32array([cttsEntries.length / 2].concat(cttsEntries));
       parts.push(fullBox("ctts", negCts ? 1 : 0, 0, cttsPayload));
     }
+
+    // Se o parse NAL falhou no meio, as flags valem para todos os samples
+    // (recalcula do zero para não misturar as duas fontes).
+    if (useNal && nalFailed) {
+      syncs = [];
+      var idx = 0;
+      for (var rr = 0; rr < track.runs.length; rr++) {
+        for (var ii = 0; ii < track.runs[rr].flags.length; ii++) {
+          idx += 1;
+          if (!(track.runs[rr].flags[ii] & SAMPLE_IS_NON_SYNC)) syncs.push(idx);
+        }
+      }
+    }
+    stats.samples = sizes.length;
+    stats.sync = syncs.length;
+    stats.syncSource = useNal && !nalFailed ? "nal" : "flags";
 
     // stss (só vídeo; se todos são sync, omitir = todos são keyframes)
     if (isVideo && syncs.length !== sizes.length) {
@@ -425,10 +489,12 @@
     return { kids: kids, tkhd: tkhd, mdia: mdia, mkids: mkids, mdhd: mdhd, minf: minf, minfKids: minfKids, stbl: stbl, trackId: trackId, timescale: timescale, handler: handler };
   }
 
-  function buildTrak(dv, u8, trak, samples, movieTimescale, shift) {
+  function buildTrak(dv, u8, trak, samples, movieTimescale, shift, reportTracks) {
     var info = trackInfo(dv, u8, trak);
     var track = samples[info.trackId];
     if (!track || track.runs.length === 0) return null; // faixa sem amostras: descarta
+    var stats = { id: info.trackId, handler: info.handler, codec: "?", samples: 0, sync: 0, syncSource: "" };
+    reportTracks.push(stats);
 
     var mediaDuration = 0;
     for (var r = 0; r < track.runs.length; r++) {
@@ -473,7 +539,7 @@
     var minfParts = [];
     for (var m = 0; m < info.minfKids.length; m++) {
       var k = info.minfKids[m];
-      if (k.type === "stbl") minfParts.push(buildStbl(dv, u8, k, track, isVideo, shift));
+      if (k.type === "stbl") minfParts.push(buildStbl(dv, u8, k, track, isVideo, shift, stats));
       else minfParts.push(slice(u8, k.start, k.start + k.size));
     }
     var minfNew = box("minf", minfParts);
@@ -513,7 +579,7 @@
     return { trak: box("trak", trakParts), presentationDurationMovie: presentationDurationMovie + delayMovie };
   }
 
-  function buildMoov(dv, u8, moov, samples) {
+  function buildMoov(dv, u8, moov, samples, report) {
     var kids = children(dv, u8, moov);
     var mvhd = findBox(kids, "mvhd");
     if (!mvhd) throw new Error("moov sem mvhd");
@@ -526,9 +592,10 @@
     function assemble(shift) {
       var traks = [];
       var maxDur = 0;
+      report.tracks = []; // duas passagens: só a última conta
       for (var i = 0; i < kids.length; i++) {
         if (kids[i].type !== "trak") continue;
-        var built = buildTrak(dv, u8, kids[i], samples, movieTimescale, shift);
+        var built = buildTrak(dv, u8, kids[i], samples, movieTimescale, shift, report.tracks);
         if (!built) continue;
         traks.push(built.trak);
         if (built.presentationDurationMovie > maxDur) maxDur = built.presentationDurationMovie;
@@ -570,7 +637,8 @@
 
     // O moov novo entra logo após o ftyp (ou no começo, se não houver ftyp).
     var insertAt = ftyp ? ftyp.start + ftyp.size : 0;
-    var newMoov = buildMoov(dv, u8, moov, samples);
+    var report = { tracks: [], inputBoxes: top.map(function (b) { return b.type; }) };
+    var newMoov = buildMoov(dv, u8, moov, samples, report);
     // shift real = tamanho do moov novo (deslocamento de tudo após insertAt).
     // buildMoov já usou esse tamanho (duas passagens), então basta conferir.
     var shift = newMoov.length;
@@ -605,7 +673,7 @@
         parts.push(slice(u8, b.start, b.start + b.size));
       }
     }
-    return { parts: parts, shift: shift };
+    return { parts: parts, shift: shift, info: report };
   }
 
   return remuxFragmentedMp4;
