@@ -453,6 +453,27 @@
     return "";
   }
 
+  // O Safari/iOS grava em MP4 "fragmentado" (fMP4). O app Fotos toca isso
+  // normalmente, mas muitos editores (CapCut etc.) só entendem o MP4 clássico
+  // e mostram um quadro congelado. mp4remux.js reorganiza o arquivo para o
+  // layout clássico sem recodificar (rápido, sem perda). Se qualquer coisa
+  // falhar, mantém o arquivo original — nunca perde a gravação.
+  function finalizeRecording(blob, type) {
+    if (type.indexOf("mp4") === -1 || typeof window.remuxFragmentedMp4 !== "function" || !blob.arrayBuffer) {
+      return Promise.resolve(blob);
+    }
+    showToast("Preparando o vídeo...");
+    return blob.arrayBuffer().then(function (buf) {
+      var result = window.remuxFragmentedMp4(buf);
+      return new Blob(result.parts, { type: type });
+    }).catch(function () {
+      return blob;
+    }).then(function (finalBlob) {
+      toast.classList.add("hidden");
+      return finalBlob;
+    });
+  }
+
   // Taxa de bits explícita: o padrão do gravador costuma ser baixo e deixa
   // o vídeo com aspecto "borrado" mesmo em Full HD. 8 Mbps é um valor
   // confortável para 1080p. Tentamos com bitrate + formato; se o navegador
@@ -488,8 +509,9 @@
       if (e.data && e.data.size > 0) recordedChunks.push(e.data);
     };
     mediaRecorder.onstop = function () {
-      var blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || mimeType || "video/webm" });
-      showReview(blob);
+      var type = mediaRecorder.mimeType || mimeType || "video/webm";
+      var raw = new Blob(recordedChunks, { type: type });
+      finalizeRecording(raw, type).then(showReview);
     };
     // Passar um timeslice faz o gravador liberar pedaços a cada 1s em vez
     // de só no final. Sem isso, o Safari é conhecido por travar o vídeo

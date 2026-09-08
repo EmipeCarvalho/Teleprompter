@@ -103,6 +103,7 @@ app abrirá em modo tela cheia (standalone) a partir do ícone.
 index.html        Estrutura das telas (configuração, teleprompter, revisão)
 style.css         Estilos (mobile-first, tema escuro)
 app.js            Lógica (scroll automático, controles, câmera, gravação, persistência)
+mp4remux.js       Converte o MP4 "fragmentado" do Safari em MP4 clássico (compatível com editores)
 server.js         Servidor estático (Node puro), escuta em 0.0.0.0, HTTP ou HTTPS
 generate-cert.sh  Gera o certificado autoassinado usado para servir HTTPS
 manifest.json     Metadados para "Adicionar à Tela de Início" no iPhone
