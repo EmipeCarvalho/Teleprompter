@@ -378,8 +378,28 @@
         height: { ideal: 1080 },
         frameRate: { ideal: 30 }
       },
-      audio: true
+      // Por padrão o navegador aplica processamentos feitos para chamadas
+      // (cancelamento de eco, supressão de ruído, ganho automático) que
+      // deixam a voz abafada e "metálica". Numa gravação não há eco a
+      // cancelar (a prévia é muda), então pedimos o áudio cru, como o app
+      // de Câmera nativo. "ideal" = preferência: se o aparelho não
+      // suportar, continua funcionando com o padrão.
+      audio: {
+        echoCancellation: { ideal: false },
+        noiseSuppression: { ideal: false },
+        autoGainControl: { ideal: false },
+        sampleRate: { ideal: 48000 },
+        channelCount: { ideal: 1 }
+      }
     });
+  }
+
+  // A câmera frontal é mostrada espelhada na prévia (como um espelho e como
+  // o app de Câmera do iPhone faz); a traseira, não. Só a prévia é
+  // espelhada — o gravador captura o stream, não o elemento na tela, então
+  // o vídeo salvo fica na orientação real, igual ao padrão do iPhone.
+  function applyPreviewMirror() {
+    cameraVideo.classList.toggle("mirror-preview", cameraFacing === "user");
   }
 
   function startCamera() {
@@ -391,6 +411,7 @@
     requestCameraStream(cameraFacing).then(function (stream) {
       cameraStream = stream;
       cameraVideo.srcObject = stream;
+      applyPreviewMirror();
       prompterScreen.classList.add("camera-mode");
       cameraFlipBtn.classList.remove("hidden");
       recordRow.classList.remove("hidden");
@@ -429,6 +450,7 @@
       cameraStream = stream;
       cameraFacing = newFacing;
       cameraVideo.srcObject = stream;
+      applyPreviewMirror();
     }).catch(function () {
       /* câmera solicitada indisponível — mantém a atual */
     });
@@ -486,7 +508,10 @@
   // confortável para 1080p. Tentamos com bitrate + formato; se o navegador
   // rejeitar as opções, caímos para só o formato e, por fim, para o padrão.
   function createRecorder(stream, mimeType) {
+    // 192 kbps de áudio: o padrão do gravador é baixo demais para voz com
+    // qualidade de publicação.
     var attempts = [
+      { mimeType: mimeType, videoBitsPerSecond: 8000000, audioBitsPerSecond: 192000 },
       { mimeType: mimeType, videoBitsPerSecond: 8000000 },
       { mimeType: mimeType },
       null

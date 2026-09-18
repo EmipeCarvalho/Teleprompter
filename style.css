@@ -409,6 +409,11 @@ input[type="range"]::-moz-range-thumb {
   z-index: 0;
 }
 
+/* Prévia da câmera frontal espelhada (só na tela; a gravação não é). */
+#camera-video.mirror-preview {
+  transform: scaleX(-1);
+}
+
 #prompter-screen.camera-mode #scroll-container {
   top: calc(var(--safe-top) + 90px);
   height: 38vh;
