@@ -108,3 +108,25 @@ server.js         Servidor estático (Node puro), escuta em 0.0.0.0, HTTP ou HTT
 generate-cert.sh  Gera o certificado autoassinado usado para servir HTTPS
 manifest.json     Metadados para "Adicionar à Tela de Início" no iPhone
 ```
+
+## Revisão de confiabilidade e leitura
+
+- A gravação original é preservada; a conversão MP4 para editores é opcional.
+- O último take concluído é guardado no IndexedDB do mesmo navegador/origem.
+  Use **Recuperar última gravação**. Não substitui salvar o vídeo: limpeza de
+  dados, falta de espaço ou encerramento antes de concluir o take podem impedir recuperação.
+- Velocidade de 0,25 a 20 (4–320 px/s), fonte de 16 a 120 px e ajustes durante a leitura.
+- Arrastar reposiciona o texto e mantém o estado anterior de reprodução.
+- Largura, altura inicial e entrelinha ajustáveis para aproximar a leitura da lente.
+- Câmera abre com leitura pausada. Gravar inicia a rolagem.
+- 1080p/30 com bitrate solicitado de 12 Mbps ou 720p/30 com 6 Mbps;
+  o navegador pode negociar outros valores. Áudio solicitado a 192 kbps.
+- Áudio natural ou com redução de ruído, medidor de microfone e bloqueio de
+  gravação quando uma faixa de áudio/vídeo não está disponível.
+- Ao ocultar o aplicativo durante gravação, o take é encerrado para revisão.
+- Servidor local permite somente os arquivos públicos do aplicativo.
+
+As mudanças reduzem riscos, mas não diagnosticam um arquivo já corrompido.
+Valide um take no aparelho e no editor usado antes de uma gravação importante.
+Referências: https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
+ e https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/dataavailable_event

@@ -583,3 +583,25 @@ input[type="range"]::-moz-range-thumb {
   flex-direction: column;
   gap: 10px;
 }
+
+
+/* Short lines near the lens reduce horizontal eye travel. */
+#prompter-screen.camera-mode #scroll-container {
+  top: calc(var(--safe-top) + var(--reading-top, 6vh));
+  bottom: auto;
+  height: 32vh;
+  left: 50%; right: auto;
+  width: var(--reading-width, 72%);
+  transform: translateX(-50%);
+  border-radius: 12px;
+}
+#prompter-screen.camera-mode #text-content { padding-left: 14px; padding-right: 14px; }
+.reading-settings { margin: 20px 0; }
+.reading-settings label, #live-settings label { display: block; margin: 10px 0; }
+.reading-settings p { color: var(--text-dim); line-height: 1.5; }
+select { padding: 12px; width: 100%; background: #222; color: white; border-radius: 8px; }
+#live-settings { position: absolute; top: calc(var(--safe-top) + 70px); right: 12px; width: min(300px, 90vw); padding: 16px; border-radius: 16px; background: #181818; pointer-events: auto; }
+.controls-hidden:has(#live-settings:not(.hidden)) { opacity: 1; pointer-events: auto; }
+
+.audio-status { font-size: 12px; display: grid; gap: 4px; max-width: 190px; }
+.audio-status meter { width: 100%; }

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -28,7 +28,7 @@
           <span>Velocidade</span>
           <span id="speed-value" class="control-value">5</span>
         </div>
-        <input type="range" id="speed-range" min="1" max="10" step="1" value="5">
+        <input type="range" id="speed-range" min="0.25" max="20" step="0.25" value="5">
       </div>
 
       <div class="control">
@@ -36,7 +36,7 @@
           <span>Tamanho da fonte</span>
           <span id="font-value" class="control-value">42</span>
         </div>
-        <input type="range" id="font-range" min="24" max="96" step="2" value="42">
+        <input type="range" id="font-range" min="16" max="120" step="2" value="42">
       </div>
 
       <div class="control">
@@ -62,6 +62,17 @@
       </div>
     </div>
 
+    <div class="control reading-settings">
+      <h2>Leitura perto da câmera</h2>
+      <p>Use linhas curtas e olhe para a lente entre as frases. Ajuste a posição conforme a câmera do aparelho.</p>
+      <label>Largura do texto <input id="textWidth" type="range" min="40" max="100" step="1"></label>
+      <label>Distância do topo <input id="textTop" type="range" min="0" max="45" step="1"></label>
+      <label>Espaço entre linhas <input id="lineHeight" type="range" min="1.1" max="2" step="0.05"></label>
+      <label>Qualidade <select id="quality"><option value="1080">Full HD · 1080p</option><option value="720">HD · 720p (menor processamento)</option></select></label>
+      <label>Áudio <select id="audioMode"><option value="natural">Natural · sem redução de ruído</option><option value="voice">Voz · redução de ruído e ganho automático</option></select></label>
+    </div>
+    <button type="button" id="recover-btn" class="secondary-btn">Recuperar última gravação</button>
+    <p id="setup-notice" role="status"></p>
     <p id="camera-warning" class="camera-warning hidden">
       A câmera só funciona em conexão segura (HTTPS) ou em "localhost". Veja o
       README para gerar um certificado local e acessar por HTTPS no celular.
@@ -87,9 +98,14 @@
   <div id="controls-overlay" class="controls-hidden">
     <div class="controls-top">
       <button type="button" id="exit-btn" class="ctrl-btn ctrl-btn--icon" aria-label="Sair">✕</button>
+      <button type="button" id="live-settings-toggle" class="ctrl-btn">Ajustes</button>
       <button type="button" id="restart-btn" class="ctrl-btn ctrl-btn--icon" aria-label="Reiniciar">⟲</button>
     </div>
 
+    <div id="live-settings" class="hidden">
+      <label>Velocidade <output id="live-speed-value"></output><input id="live-speed" type="range" min="0.25" max="20" step="0.25"></label>
+      <label>Fonte <input id="live-font" type="range" min="16" max="120" step="2"></label>
+    </div>
     <div class="controls-bottom">
       <div class="ctrl-row">
         <button type="button" id="font-dec-btn" class="ctrl-btn">A−</button>
@@ -102,6 +118,7 @@
         <button type="button" id="speed-inc-btn" class="ctrl-btn ctrl-btn--round">+</button>
       </div>
       <div class="ctrl-row hidden" id="record-row">
+        <div class="audio-status"><meter id="audio-meter" min="0" max="100" value="0" aria-label="Nível do microfone"></meter><span id="audio-level" role="status">Teste o microfone</span></div>
         <button type="button" id="record-btn" class="ctrl-btn ctrl-btn--record" aria-label="Gravar">
           <span class="record-btn-dot"></span>
         </button>
@@ -126,6 +143,8 @@
     <p id="review-info" class="review-info"></p>
     <div class="review-actions">
       <button type="button" id="review-save-btn" class="primary-btn">Salvar vídeo</button>
+      <button type="button" id="review-original-btn" class="secondary-btn secondary-btn--dark">Salvar original</button>
+      <button type="button" id="review-convert-btn" class="secondary-btn secondary-btn--dark">Preparar cópia para editor</button>
       <button type="button" id="review-retake-btn" class="secondary-btn secondary-btn--dark">Gravar novamente</button>
       <button type="button" id="review-exit-btn" class="secondary-btn secondary-btn--dark">Sair</button>
     </div>

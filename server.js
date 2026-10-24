@@ -32,7 +32,8 @@ const MIME_TYPES = {
 };
 
 function getLocalNetworkIps() {
-  const interfaces = os.networkInterfaces();
+  let interfaces;
+  try { interfaces = os.networkInterfaces(); } catch (e) { return []; }
   const ips = [];
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
@@ -45,12 +46,15 @@ function getLocalNetworkIps() {
 }
 
 function requestHandler(req, res) {
-  let urlPath = decodeURIComponent(req.url.split("?")[0]);
+  let urlPath;
+  try { urlPath = decodeURIComponent(req.url.split("?")[0]); }
+  catch (e) { res.writeHead(400); res.end("Bad request"); return; }
   if (urlPath === "/") urlPath = "/index.html";
 
   // Evita path traversal — restringe a resolução ao diretório do projeto.
   const filePath = path.normalize(path.join(ROOT, urlPath));
-  if (!filePath.startsWith(ROOT)) {
+  const publicFiles = new Set(["index.html", "style.css", "app.js", "mp4remux.js", "manifest.json"]);
+  if (!publicFiles.has(path.relative(ROOT, filePath))) {
     res.writeHead(403);
     res.end("Forbidden");
     return;
