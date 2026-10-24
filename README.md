@@ -90,7 +90,7 @@ app abrirá em modo tela cheia (standalone) a partir do ícone.
 - Modo câmera: câmera ao vivo atrás do roteiro + gravação de vídeo direto
   no navegador (requer HTTPS local, veja acima).
 - Modo teleprompter: fundo preto, texto branco, rolagem automática suave.
-- Toque no centro da tela para pausar/retomar.
+- Apenas o botão de play/pausa pausa ou retoma a leitura. Tocar no texto apenas mostra os controles.
 - Controles discretos (aparecem ao tocar, somem sozinhos): play/pause,
   aumentar/diminuir velocidade, aumentar/diminuir fonte, reiniciar, sair.
 - Mantém a tela ligada durante o uso (Wake Lock API, quando suportado).
@@ -116,7 +116,7 @@ manifest.json     Metadados para "Adicionar à Tela de Início" no iPhone
   Use **Recuperar última gravação**. Não substitui salvar o vídeo: limpeza de
   dados, falta de espaço ou encerramento antes de concluir o take podem impedir recuperação.
 - Velocidade de 0,25 a 20 (4–320 px/s), fonte de 16 a 120 px e ajustes durante a leitura.
-- Arrastar reposiciona o texto e mantém o estado anterior de reprodução.
+- Tocar ou arrastar o texto mantém o estado de reprodução. Após soltar o arrasto, a rolagem continua da nova posição; se estava pausada, permanece pausada.
 - Largura, altura inicial e entrelinha ajustáveis para aproximar a leitura da lente.
 - Câmera abre com leitura pausada. Gravar inicia a rolagem.
 - 1080p/30 com bitrate solicitado de 12 Mbps ou 720p/30 com 6 Mbps;

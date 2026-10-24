@@ -82,9 +82,7 @@
   var originalBlob = null;
   var cameraGeneration = 0;
   var dragging = false;
-  var dragMoved = false;
-  var dragStartY = 0;
-  var resumeAfterDrag = false;
+  var pointerHeld = false;
   var dragTimer = null;
   var finalizing = false;
   var audioContext = null;
@@ -407,39 +405,36 @@
     hideControlsTimer = null;
   }
 
-  // O texto rola nativamente com o dedo (a área já é um contêiner com
-  // overflow-y: scroll — o navegador cuida do arrastar/momentum sozinho).
-  // Um toque simples (sem arrastar) dá play/pause; o próprio navegador não
-  // dispara "click" depois de um gesto de rolagem, então os dois convivem
-  // sem gesto customizado nenhum. O pointerdown já pausa (pra não brigar
-  // com o arrasto), então o click decide com base no estado ANTES do
-  // toque, não no que ficou logo depois do pointerdown.
-  scrollContainer.addEventListener("pointerdown", function (e) {
-    dragging = true; dragMoved = false; dragStartY = e.clientY;
-    resumeAfterDrag = isPlaying;
+  // Text gestures only reposition. Playback belongs to the explicit button.
+  // Suspend animation writes while the finger/momentum controls native scroll;
+  // keep isPlaying unchanged and resume from the new position on release.
+  scrollContainer.addEventListener("pointerdown", function () {
+    dragging = true;
+    pointerHeld = true;
     clearTimeout(dragTimer);
   });
-  scrollContainer.addEventListener("pointermove", function (e) {
-    if (Math.abs(e.clientY - dragStartY) > 6) dragMoved = true;
-  });
   function finishDrag() {
+    if (!dragging || pointerHeld) return;
+    clearTimeout(dragTimer);
     dragTimer = setTimeout(function () {
       scrollPosition = scrollContainer.scrollTop;
-      dragging = false; lastTimestamp = null;
+      dragging = false;
+      lastTimestamp = null;
     }, 180);
   }
-  window.addEventListener("pointerup", finishDrag);
-  window.addEventListener("pointercancel", finishDrag);
+  function releaseTextPointer() {
+    pointerHeld = false;
+    finishDrag();
+  }
+  window.addEventListener("pointerup", releaseTextPointer);
+  window.addEventListener("pointercancel", releaseTextPointer);
   scrollContainer.addEventListener("click", function () {
-    if (!dragMoved) {
-      dragging = false;
-      if (resumeAfterDrag) pause(); else play();
-    }
     showControls();
+    if (isPlaying) scheduleAutoHide();
   });
   scrollContainer.addEventListener("scroll", function () {
     scrollPosition = scrollContainer.scrollTop;
-    if (dragging) finishDrag();
+    if (dragging && !pointerHeld) finishDrag();
   });
 
   controlsOverlay.addEventListener("click", function () {
