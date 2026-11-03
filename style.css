@@ -605,3 +605,12 @@ select { padding: 12px; width: 100%; background: #222; color: white; border-radi
 
 .audio-status { font-size: 12px; display: grid; gap: 4px; max-width: 190px; }
 .audio-status meter { width: 100%; }
+
+/* Preserve vertical script scrolling and suppress double-tap zoom in the prompter. */
+#prompter-screen {
+  touch-action: manipulation;
+}
+
+#scroll-container {
+  touch-action: pan-y;
+}
