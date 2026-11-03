@@ -395,6 +395,7 @@
 
   function scheduleAutoHide() {
     clearAutoHide();
+    if (isRecording) return;
     hideControlsTimer = setTimeout(function () {
       if (isPlaying) hideControls();
     }, 2800);
@@ -659,6 +660,8 @@
     try { recorder.start(1000); }
     catch (e) { showToast("Falha ao iniciar gravação: " + e.message); return; }
     isRecording = true;
+    clearAutoHide();
+    showControls();
     recordBtn.classList.add("is-recording");
     recIndicator.classList.remove("hidden");
     if (!isPlaying) play();
