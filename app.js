@@ -7,7 +7,7 @@
     script: "",
     speed: 5,
     fontSize: 42,
-    align: "left",
+    align: "center",
     mirror: false,
     cameraEnabled: false,
     textWidth: 72,
@@ -28,11 +28,9 @@
   var speedValue = document.getElementById("speed-value");
   var fontRange = document.getElementById("font-range");
   var fontValue = document.getElementById("font-value");
-  var alignSegmented = document.getElementById("align-segmented");
   var mirrorToggle = document.getElementById("mirror-toggle");
   var cameraToggle = document.getElementById("camera-toggle");
   var cameraWarning = document.getElementById("camera-warning");
-  var fullscreenBtn = document.getElementById("fullscreen-btn");
   var startBtn = document.getElementById("start-btn");
 
   var scrollContainer = document.getElementById("scroll-container");
@@ -151,6 +149,7 @@
         var bounds = { speed: [0.25, 20], fontSize: [16, 120], textWidth: [40, 100], textTop: [0, 45], lineHeight: [1.1, 2] }[key];
         loaded[key] = Number.isFinite(Number(loaded[key])) ? Math.max(bounds[0], Math.min(bounds[1], Number(loaded[key]))) : defaultState[key];
       });
+      loaded.align = "center";
       return loaded;
     } catch (e) {
       return Object.assign({}, defaultState);
@@ -172,7 +171,6 @@
     speedValue.textContent = state.speed;
     fontRange.value = state.fontSize;
     fontValue.textContent = state.fontSize;
-    setAlignUI(state.align);
     setMirrorUI(state.mirror);
     setCameraUI(state.cameraEnabled);
   }
@@ -182,21 +180,14 @@
   }
 
   function setCameraUI(cameraEnabled) {
-    cameraToggle.setAttribute("aria-pressed", cameraEnabled ? "true" : "false");
-    cameraToggle.textContent = "Câmera: " + (cameraEnabled ? "Ligada" : "Desligada");
+    cameraToggle.setAttribute("aria-checked", cameraEnabled ? "true" : "false");
+    cameraToggle.querySelector(".switch-status").textContent = cameraEnabled ? "Ligado" : "Desligado";
     cameraWarning.classList.toggle("hidden", !cameraEnabled || cameraApiAvailable());
   }
 
-  function setAlignUI(align) {
-    var btns = alignSegmented.querySelectorAll(".segmented-btn");
-    btns.forEach(function (btn) {
-      btn.classList.toggle("active", btn.dataset.align === align);
-    });
-  }
-
   function setMirrorUI(mirror) {
-    mirrorToggle.setAttribute("aria-pressed", mirror ? "true" : "false");
-    mirrorToggle.textContent = "Espelhamento: " + (mirror ? "Ligado" : "Desligado");
+    mirrorToggle.setAttribute("aria-checked", mirror ? "true" : "false");
+    mirrorToggle.querySelector(".switch-status").textContent = mirror ? "Ligado" : "Desligado";
   }
 
   document.getElementById("clear-script-btn").addEventListener("click", function () {
@@ -224,14 +215,6 @@
     saveState();
   });
 
-  alignSegmented.addEventListener("click", function (e) {
-    var btn = e.target.closest(".segmented-btn");
-    if (!btn) return;
-    state.align = btn.dataset.align;
-    setAlignUI(state.align);
-    saveState();
-  });
-
   mirrorToggle.addEventListener("click", function () {
     state.mirror = !state.mirror;
     setMirrorUI(state.mirror);
@@ -242,10 +225,6 @@
     state.cameraEnabled = !state.cameraEnabled;
     setCameraUI(state.cameraEnabled);
     saveState();
-  });
-
-  fullscreenBtn.addEventListener("click", function () {
-    requestFullscreenSafe(document.documentElement);
   });
 
   startBtn.addEventListener("click", function () {
@@ -323,8 +302,8 @@
   function applyTextContent() {
     textContent.textContent = state.script;
     textContent.style.fontSize = state.fontSize + "px";
-    textContent.classList.toggle("align-left", state.align === "left");
-    textContent.classList.toggle("align-center", state.align === "center");
+    textContent.classList.remove("align-left");
+    textContent.classList.add("align-center");
     textContent.classList.toggle("mirrored", !!state.mirror);
   }
 
