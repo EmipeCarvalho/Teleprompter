@@ -67,7 +67,6 @@
   var lastTimestamp = null;
   var scrollPosition = 0; // fractional px, more precise than scrollTop
   var wakeLock = null;
-  var hideControlsTimer = null;
   var toastTimer = null;
 
   // ---------- runtime camera/recording state ----------
@@ -267,7 +266,6 @@
     prompterScreen.classList.remove("hidden");
     resetScrollPosition();
     showControls();
-    scheduleAutoHide();
     pause();
     requestWakeLock();
     if (state.cameraEnabled) startCamera();
@@ -353,7 +351,6 @@
     playPauseBtn.textContent = "❚❚";
     playPauseBtn.setAttribute("aria-label", "Pausar");
     rafId = requestAnimationFrame(tick);
-    scheduleAutoHide();
   }
 
   function pause() {
@@ -363,7 +360,6 @@
     playPauseBtn.textContent = "▶";
     playPauseBtn.setAttribute("aria-label", "Reproduzir");
     showControls();
-    clearAutoHide();
   }
 
   function togglePlayPause() {
@@ -376,22 +372,6 @@
     controlsOverlay.classList.remove("controls-hidden");
   }
 
-  function hideControls() {
-    controlsOverlay.classList.add("controls-hidden");
-  }
-
-  function scheduleAutoHide() {
-    clearAutoHide();
-    if (isRecording) return;
-    hideControlsTimer = setTimeout(function () {
-      if (isPlaying) hideControls();
-    }, 2800);
-  }
-
-  function clearAutoHide() {
-    if (hideControlsTimer) clearTimeout(hideControlsTimer);
-    hideControlsTimer = null;
-  }
 
   // Text gestures only reposition. Playback belongs to the explicit button.
   // Suspend animation writes while the finger/momentum controls native scroll;
@@ -418,7 +398,6 @@
   window.addEventListener("pointercancel", releaseTextPointer);
   scrollContainer.addEventListener("click", function () {
     showControls();
-    if (isPlaying) scheduleAutoHide();
   });
   scrollContainer.addEventListener("scroll", function () {
     scrollPosition = scrollContainer.scrollTop;
@@ -427,7 +406,6 @@
 
   controlsOverlay.addEventListener("click", function () {
     showControls();
-    if (isPlaying) scheduleAutoHide();
   });
 
   // ---------- câmera ----------
@@ -647,7 +625,6 @@
     try { recorder.start(1000); }
     catch (e) { showToast("Falha ao iniciar gravação: " + e.message); return; }
     isRecording = true;
-    clearAutoHide();
     showControls();
     recordBtn.classList.add("is-recording");
     recIndicator.classList.remove("hidden");
@@ -873,7 +850,7 @@
     document.getElementById("live-speed").value = state.speed;
     document.getElementById("live-font").value = state.fontSize;
     document.getElementById("live-speed-value").textContent = (state.speed * 16).toFixed(0) + " px/s";
-    showControls(); clearAutoHide();
+    showControls();
   });
   document.getElementById("review-convert-btn").addEventListener("click", function () {
     if (!originalBlob || finalizing) return;
