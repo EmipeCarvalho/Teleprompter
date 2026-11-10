@@ -602,7 +602,8 @@ select { padding: 12px; width: 100%; background: #222; color: white; border-radi
 
 /* Preserve vertical script scrolling and suppress double-tap zoom in the prompter. */
 #prompter-screen {
-  touch-action: manipulation;
+  touch-action: pan-y;
+  overflow: hidden;
 }
 
 #scroll-container {
@@ -631,3 +632,6 @@ select { padding: 12px; width: 100%; background: #222; color: white; border-radi
   touch-action: manipulation;
 }
 #clear-script-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* Controls accept taps without allowing the page to scale. */
+#prompter-screen button, #prompter-screen input { touch-action: manipulation; }
