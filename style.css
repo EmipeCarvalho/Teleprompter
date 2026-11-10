@@ -300,18 +300,13 @@ input[type="range"]::-moz-range-thumb {
   flex-direction: column;
   justify-content: space-between;
   pointer-events: none;
-  transition: opacity 0.25s ease;
   padding-top: calc(var(--safe-top) + 14px);
   padding-bottom: calc(var(--safe-bottom) + 18px);
   padding-left: calc(var(--safe-left) + 14px);
   padding-right: calc(var(--safe-right) + 14px);
 }
 
-#controls-overlay.controls-hidden {
-  opacity: 0;
-}
-
-#controls-overlay:not(.controls-hidden) {
+#controls-overlay {
   opacity: 1;
 }
 
