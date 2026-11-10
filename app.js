@@ -61,6 +61,21 @@
   var exitConfirmCancelBtn = document.getElementById("exit-confirm-cancel");
   var exitConfirmOkBtn = document.getElementById("exit-confirm-ok");
 
+
+  // Keep the reading screen at its normal scale, including iOS Safari gestures.
+  function preventPrompterZoom(event) {
+    if (prompterScreen.classList.contains("hidden")) return;
+    if (event.type.indexOf("gesture") === 0 ||
+        event.type === "dblclick" ||
+        (event.touches && event.touches.length > 1) ||
+        (event.type === "wheel" && event.ctrlKey)) {
+      if (event.cancelable) event.preventDefault();
+    }
+  }
+  ["touchstart", "touchmove", "gesturestart", "gesturechange", "gestureend", "dblclick", "wheel"].forEach(function (type) {
+    document.addEventListener(type, preventPrompterZoom, { passive: false });
+  });
+
   // ---------- runtime scroll state ----------
   var isPlaying = false;
   var rafId = null;
