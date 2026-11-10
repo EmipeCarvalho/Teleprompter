@@ -199,6 +199,14 @@
     mirrorToggle.textContent = "Espelhamento: " + (mirror ? "Ligado" : "Desligado");
   }
 
+  document.getElementById("clear-script-btn").addEventListener("click", function () {
+    scriptInput.value = "";
+    scriptInput.scrollTop = 0;
+    state.script = "";
+    saveState();
+    scriptInput.focus();
+  });
+
   scriptInput.addEventListener("input", function () {
     state.script = scriptInput.value;
     saveState();
