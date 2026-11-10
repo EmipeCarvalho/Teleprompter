@@ -43,24 +43,18 @@
       </div>
 
       <div class="control">
-        <div class="control-header"><span>Alinhamento</span></div>
-        <div class="segmented" id="align-segmented">
-          <button type="button" class="segmented-btn active" data-align="left">Esquerda</button>
-          <button type="button" class="segmented-btn" data-align="center">Centro</button>
-        </div>
-      </div>
-
-      <div class="control">
-        <div class="control-header"><span>Espelhar texto</span></div>
-        <button type="button" id="mirror-toggle" class="toggle-btn" aria-pressed="false">
-          Espelhamento: Desligado
+        <button type="button" id="mirror-toggle" class="switch-row" role="switch" aria-checked="false" aria-labelledby="mirror-label">
+          <span id="mirror-label" class="switch-label">Espelhar texto</span>
+          <span class="switch-status" aria-hidden="true">Desligado</span>
+          <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
         </button>
       </div>
 
       <div class="control">
-        <div class="control-header"><span>Câmera + gravação</span></div>
-        <button type="button" id="camera-toggle" class="toggle-btn" aria-pressed="false">
-          Câmera: Desligada
+        <button type="button" id="camera-toggle" class="switch-row" role="switch" aria-checked="false" aria-labelledby="camera-label">
+          <span id="camera-label" class="switch-label">Câmera + gravação</span>
+          <span class="switch-status" aria-hidden="true">Desligado</span>
+          <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
         </button>
       </div>
     </div>
@@ -82,7 +76,6 @@
     </p>
 
     <div class="setup-actions">
-      <button type="button" id="fullscreen-btn" class="secondary-btn">Ativar tela cheia</button>
       <button type="button" id="start-btn" class="primary-btn">Iniciar teleprompter</button>
     </div>
   </div>
