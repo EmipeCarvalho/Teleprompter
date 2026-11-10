@@ -19,7 +19,10 @@
   <div class="setup-inner">
     <h1 class="app-title">Teleprompter</h1>
 
-    <label class="field-label" for="script-input">Seu roteiro</label>
+    <div class="script-header">
+      <label class="field-label" for="script-input">Seu roteiro</label>
+      <button type="button" id="clear-script-btn" aria-controls="script-input">Apagar texto</button>
+    </div>
     <textarea id="script-input" placeholder="Cole ou escreva aqui o texto que você vai ler..." spellcheck="false"></textarea>
 
     <div class="controls-grid">
